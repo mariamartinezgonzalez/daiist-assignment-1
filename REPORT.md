@@ -1,25 +1,22 @@
 # Assignment 1 Report
-
-*Delete this italic guidance as you fill in each section. You'll be asked to
-defend any of this without your code in front of you — write only what you
-can actually explain.*
-
-- **Name**:
-- **Student ID**:
-- **Email**:
-- **Group**: [BBADBA 5A | BBADBA 5B | PPLEDBA 5A | BDBA 3A]
+- **María Martínez González**
+- **18752**
+- **mmg.ieu2022@student.ie.edu**
+- **BBADBA 5B** 
 
 ## Dataset
 
-*What is it, where did you get it, what does one row represent, how many
-rows/columns, and why did you pick it.*
+*I use the Spotify Data 1921-2020 dataset from Kaggle (one row = one song with
+its audio features and popularity score). I restricted it to 2000-2020 because
+in the data I saw that the average popularity of 1921-1950 songs is 1.9, while
+for 2000-2020 it is about 55. That gap reflects how old a song is, not how it
+sounds, so I cut the data to 2000-2020.*
 
 ## Business / real-life framing
 
-*The hypothetical scenario this model serves, and what that scenario implies
-for how you built the pipeline — target definition, whether a time-based
-split was necessary and why (or why not), which metric should drive the
-decision threshold and why.*
+*The label scores songs that are about to be released, so I train on 2000-2017
+and test on 2018-2020. I drop `year` because it is not a useful signal for a
+new release. I accept a low R² and explain it in the limitations section.*
 
 ## Data preparation & feature engineering
 
