@@ -18,7 +18,8 @@ tr, va, te = split(df)
 assert len(te) == len(PRED["y_test"]), "test set does not match saved predictions: rerun train"
 
 DIST_COLS = ["target", "acousticness", "danceability", "energy", "loudness", "tempo",
-             "valence", "speechiness", "instrumentalness", "liveness", "duration_ms"]
+             "valence", "speechiness", "instrumentalness", "liveness", "duration_ms",
+             "log_duration_ms"]
 
 
 def metrics_table(split_name):
@@ -52,6 +53,8 @@ def pred_vs_actual(model):
 
 def distribution(col):
     data = pd.concat([tr.assign(split="train"), va.assign(split="val"), te.assign(split="test")])
+    if col == "log_duration_ms":
+        data = data.assign(log_duration_ms=np.log(data["duration_ms"]))
     return px.histogram(data, x=col, color="split", barmode="overlay", opacity=0.55,
                         histnorm="probability density", nbins=50,
                         title=f"Distribution of {col} by split")
