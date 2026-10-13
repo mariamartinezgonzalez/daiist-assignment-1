@@ -97,4 +97,12 @@ The best audio feature, danceability, has a correlation of only 0.07 with the ta
 
 ## How to run
 
-Run `uv run python main.py train` to train the three models and save them in `models/`. Run `uv run python main.py app` to open the dashboard, which only loads the saved models and trains nothing. The checks I used to find the June 2020 problem are in `eda/`; run them from the repo root with `uv run python -m eda.check_2020`.
+Run uv run python main.py train to train the three models and save them in models/. Run uv run python main.py app to open the dashboard, which only loads the saved models and trains nothing. The checks I used to find the June 2020 problem are in eda/, run them from the repo root with uv run python -m eda.check_2020.
+
+## Generative AI use disclosure
+
+I used Claude on this assignment to:
+- discuss and check my decisions, for example the dataset, how to clean data and how to handle June 2020.
+- help write the three training loops and the Gradio dashboard.
+- help me rewrite this report in simpler words.
+I ran all the code myself in a Codespace, checked the outputs, and the numbers in this report come from my own runs. I went through the process step by step so that I can explain every decision without the code in front of me.
