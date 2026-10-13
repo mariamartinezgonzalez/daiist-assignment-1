@@ -13,8 +13,7 @@ How did I clean the dataset and make it smaller? The original file is 28 MB, whi
 - I removed duplicates (the same artist with the same title).
 - I kept at most 850 songs per year, chosen at random. This way no year counts more than another.
 - The result is 17,850 songs (2.8 MB). This is the file the project uses. The original 28 MB file is not in the repository.
-- One more cleaning step that i will explain later is that I found that songs from June 2020 have faulty popularity scores and removed them (131 songs). The model is trained
-  on the remaining 17,719 songs. The details are in the next section.
+- One more cleaning step that i will explain later is that I found that songs from June 2020 have faulty popularity scores and removed them (131 songs). The model is trained on the remaining 17,719 songs. The details are in the next section.
 
 ## Business / real-life framing
 
@@ -33,44 +32,14 @@ How did I clean the dataset and make it smaller? The original file is 28 MB, whi
 - **I chose the metrics because of the decision.** The label needs a good ranking, so besides the usual errors (MAE, RMSE and R²) I use a business number, the **hit rate**: if we promote the top k% of songs, how many of them really didbetter than the typical song of their year? The dashboard has a slider to change k.
 
 ## Data preparation & feature engineering
-
-### A data-quality problem I found: June 2020
-
-While checking the target by year, one year looked strange: the spread of
-popularity in 2020 was 18.3, while every other year was between 5.8 and 8.8.
-Looking month by month:
-
-| 2020 songs | Average popularity | Spread |
-|---|---|---|
-| January to May | about 70-71 | 6.4 to 7.6 (normal) |
-| **June** (131 songs) | **35.7** | **29.8** |
-
-In 2020, 5.6% of songs had popularity 5 or lower, against 0% in 2018 and 2019.
-My explanation (a guess I could not verify) is that June songs were so new when
-the data was collected that they had not yet collected plays.
-
-**What I did:** I removed the 131 June 2020 songs **before** computing the yearly
-average. If I had kept them, they would drag the 2020 average down and every other
-2020 song would get an artificial bonus of about +5 in its target. After removing
-them, 2020's spread went from 18.3 to 7.0, and the artist signal on the test set
-(see below) went from a correlation of 0.034 to 0.178. So the problem was hiding
-a real signal. The final dataset has **17,719 songs**.
+**I found a data problem** in June 2020: I was checking how spread out the popularity is in each year. Every year had a spread between 5.8 and 8.8, except 2020, which had 18.3. That looked wrong, so I looked month by month. from Jan to May spread was between (6.4 and 7.6) which was normal but in June spread was 29.8. Also, 5.6% of the 2020 songs had a popularity of 5 or lower, while in 2018 and 2019 there were none. **Why do I think it happened?** I believe June songs were so new when the data was collected that they had not collected plays yet, so their score was still very low. So I removed the 131 June 2020 songs **before** calculating each year's average. This matters because the target is "popularity minus the average of the year". If I had kept June, it would pull the 2020 average down, and every other 2020 song would get an artificial bonus of about +5 in its target, just because of the error in june 2020 songs. **Solving the promblem was key** After removing the songs , the 2020 spread went from 18.3 to 7.0, like the other years. Also, the relation between the artist feature (explainedin the next part) and the target on the test set went from 0.034 to 0.178. So the broken data was hiding a real signal. The final dataset has **17,719 songs**.
 
 ### The features (30 columns in total)
+**Audio features.** Acousticness, danceability, energy, loudness, tempo and valence are the main audio features, there were already numerical so I used them as they were.
+**Song length.** Most songs last about 3 or 4 minutes, but a few last over an hour. Those few songs distort the numbers. The logarithm is a way of shrinking huge numbers a lot and small numbers only a little, so the very long songs get pulled back closer to the rest. "Skew" just measures how lopsided the data is. It went from 18 (very lopsided) to almost 0 (balanced).
+**Speechiness, instrumentalness and liveness.** Most songs are near zero and a few are high. I used the square root, which reduces the problem to make it work but does not fully fix it
+**Explicit and mode.** They are already yes/no (0 or 1), so I did nothing.
 
-| Feature | Why |
-|---|---|
-| `acousticness`, `danceability`, `energy`, `loudness`, `tempo`, `valence` | Main audio features, used as they are. |
-| `log(duration)` | Song length has a few extreme songs (up to 75 minutes). Its skew was 18.0 and became -0.09 after the log. The dashboard shows both pictures. |
-| square root of `speechiness`, `instrumentalness`, `liveness` | These are mostly near zero with a long tail. The square root reduces the skew (2.65 to 1.79, 3.04 to 2.44, 2.24 to 1.29). It helps but does not fully fix it. I report that honestly. |
-| `explicit`, `mode` | Already 0/1. |
-| `key` as 11 yes/no columns | A musical key is a category, not a size (key 11 is not "bigger" than key 2). I left one key out on purpose, because with all 12 columns they always add up to 1 and repeat the intercept. |
-| number of artists (maximum 5), "feat" in title, "remix" in title | Collaborations and remixes could behave differently. |
-| release month as a circle (sine and cosine) | Month 12 is next to month 1. The circle keeps that. 7% of songs only have a year, so for them the month is set to a neutral value. I did **not** add a "month unknown" flag, because those songs are all old (15% of 2000 songs, 0% from 2015), so the flag would just act as a hidden "old song" signal. |
-| **artist score** and **how many songs the artist has** | See below. This is the most useful feature. |
-
-All features are then put on the same scale using the **training years' average
-and spread only**.
 
 ### The artist score (the feature that matters most)
 
