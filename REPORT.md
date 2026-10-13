@@ -105,4 +105,5 @@ I used Claude on this assignment to:
 - discuss and check my decisions, for example the dataset, how to clean data and how to handle June 2020.
 - help write the three training loops and the Gradio dashboard.
 - help me rewrite this report in simpler words.
+  
 I ran all the code myself in a Codespace, checked the outputs, and the numbers in this report come from my own runs. I went through the process step by step so that I can explain every decision without the code in front of me.
