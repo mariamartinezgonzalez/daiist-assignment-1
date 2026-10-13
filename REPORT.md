@@ -46,10 +46,7 @@ How did I clean the dataset and make it smaller? The original file is 28 MB, whi
 - **Different Scales.** Putting everything on the same scale. Tempo is around 120, while danceability is between 0 and 1. tempo would seem more important just because its numbers are bigger. For each feature I subtracted its average and divided by its spread (standard deviation). The result is that every feature has an average of 0 and a typical size of 1. A tempo of 120 and a danceability of 0.6 both become numbers like 0.3 or -1.2, meaning “a bit above average” or “a bit below”.
 
 ### The artist score (the feature that matters most)
-The best audio feature, danceability, has a correlation of only 0.07 with the
-target. That is almost zero, so knowing how danceable a song is tells me very
-little about whether it beat its year. Since every audio feature is that weak, a
-model using only audio cannot predict much. That is why:
+The best audio feature, danceability, has a correlation of only 0.07 with the target. That is almost zero, so knowing how danceable a song is tells me very little about whether it beat its year. Since every audio feature is that weak, a model using only audio cannot predict much. That is why:
 - the audio-only model had a validation R² of about -0.01, slightly worse than
   just guessing the average,
 - the artist score became the most important feature, since it was the one clue
@@ -60,89 +57,44 @@ model using only audio cannot predict much. That is why:
 **Methodology** For each song, I calculate the average target of that artist's other songs. If the artist has few songs, I pull the average towards the overall average, so one lucky song does not make an artist look great. If a song has several artists, I average their scores. I also added how many songs the artist has, so the model knows how much to trust the score.
 
 **Two protections against cheating:**
-- **A song never sees its own answer.** For training songs, I split them in 5 groups.
-  A song's artist score is calculated using only the other 4 groups. If not, the
-  score would contain the answer the model is trying to guess.
-- **Only the past is used.** For validation and test songs, the artist score uses
-  only the training years. If the artist is not in the training years, the song gets
-  a neutral value (the overall average). About 57% of validation songs and 45% of
-  test songs have an artist the model already knows.
+- **A song never sees its own answer.** For training songs, I split them in 5 groups. A song's artist score is calculated using only the other 4 groups. If not, the score would contain the answer the model is trying to guess.
+- **Only the past is used.** For validation and test songs, the artist score uses only the training years. If the artist is not in the training years, the song gets a neutral value (the overall average). About 57% of validation songs and 45% of test songs have an artist the model already knows.
 
-**Did it help?** Yes. On the validation set, the model without the artist score was
-slightly worse than just guessing the average (R² of about -0.01). With it, it was
-slightly better (about +0.015). The artist score is also by far the biggest weight in
-the model.
+**Did it help?** Yes. On the validation set, the model without the artist score was slightly worse than just guessing the average (R² of about -0.01). With it, it was slightly better (about +0.015). The artist score is also by far the biggest weight in the model.
 
 ## Modeling: three implementations, one model
 
-**Which model and why?** I used linear regression with a small penalty (Ridge). It is
-a simple formula: each feature is multiplied by a weight and the results are added up.
-I chose it because the assignment asks for a simple model, and because it is easy to
-explain, since you can read the weights. The penalty shrinks weights that are mostly
-noise, which helps here because the signal is weak.
+**Which model and why?** I used linear regression with a small penalty (Ridge). It is a simple formula: each feature is multiplied by a weight and the results are added up. I chose it because the assignment asks for a simple model, and because it is easy to explain, since you can read the weights. The penalty shrinks weights that are mostly noise, which helps here because the signal is weak.
 
 **Three ways to train the same model, on the same split:**
 - **scikit-learn (Ridge):** it solves the problem directly with a formula.
-- **Manual PyTorch loop:** I write every step myself: predict, measure the error,
-  find which direction improves it (the gradient), move the weights a little, and
-  repeat 3,000 times.
-- **Standard PyTorch (nn.Module + optimizer):** the usual way, where PyTorch handles
-  the steps.
+- **Manual PyTorch loop:** I write every step myself: predict, measure the error, find which direction improves it (the gradient), move the weights a little, and repeat 3,000 times.
+- **Standard PyTorch (nn.Module + optimizer):** the usual way, where PyTorch handles the steps.
 
 **Settings I tuned (using only the validation set):**
-- **Penalty strength:** I tried 9 values, from 0.1 to 100,000. The best was 10,000.
-  That is a strong penalty, which tells me most features carry very little signal.
-- **Learning rate** (the size of each step in PyTorch): I tried 4 values and all gave
-  exactly the same result, so the choice does not matter here. The features are on the
-  same scale, so the problem is easy.
+- **Penalty strength:** I tried 9 values, from 0.1 to 100,000. The best was 10,000. That is a strong penalty, which tells me most features carry very little signal.
+- **Learning rate** (the size of each step in PyTorch): I tried 4 values and all gave exactly the same result, so the choice does not matter here. The features are on the same scale, so the problem is easy.
 
-**Results on the test set (2018 to May 2020).** The naive baseline, which predicts the
-training average for every song, has an average error (MAE) of 5.12 and an RMSE of 6.45.
-All three methods give an MAE of 4.90, an RMSE of 6.29 and an R² of 0.049. So they beat
-the baseline a little, and the three give the same numbers.
+**Results on the test set (2018 to May 2020).** The naive baseline, which predicts the training average for every song, has an average error (MAE) of 5.12 and an RMSE of 6.45. All three methods give an MAE of 4.90, an RMSE of 6.29 and an R² of 0.049. So they beat the baseline a little, and the three give the same numbers.
 
-**Do the three agree?** Yes. The weights are the same up to 0.0000013, which is just
-rounding. To make this true I had to get two details right:
-- scikit-learn adds up the errors over all songs, but PyTorch uses the average. So the
-  penalty must be divided by the number of songs in my manual loop, and doubled
-  in the optimizer's weight decay (because of the derivative of a square).
+**Do the three agree?** Yes. The weights are the same up to 0.0000013, which is just rounding. To make this true I had to get two details right:
+- scikit-learn adds up the errors over all songs, but PyTorch uses the average. So the penalty must be divided by the number of songs in my manual loop, and doubled in the optimizer's weight decay (because of the derivative of a square).
 - The intercept (the model's starting level) is not penalized in any of the three.
 
-**One thing that looks like a difference but is not:** the final loss printed is 53.4
-for the manual loop and 51.9 for standard PyTorch. The manual loss includes the penalty
-and the standard one does not. The weights are identical, so the models are the same.
+**One thing that looks like a difference but is not:** the final loss printed is 53.4 for the manual loop and 51.9 for standard PyTorch. The manual loss includes the penalty and the standard one does not. The weights are identical, so the models are the same.
 
-**What is the model good for?** If the label promotes the top 20% of test songs
-according to the model, 57% of them really beat their year, against 43% for a random
-pick. At 5% it is 59%, and at 50% it is 53%. So the model is a modest help for
-ranking, not a predictor of exact popularity. The random rate is 43% and not 50%
-because a few very popular songs pull the average up.
+**What is the model good for?** If the label promotes the top 20% of test songs according to the model, 57% of them really beat their year, against 43% for a random pick. At 5% it is 59%, and at 50% it is 53%. So the model is a modest help for ranking, not a predictor of exact popularity. The random rate is 43% and not 50% because a few very popular songs pull the average up.
 
 ## Limitations & next steps
 
-- **Very low R² (0.049).** Only about 5% of the differences between songs of the same
-  year are explained. Audio features say little about success, which also depends on
-  marketing, fame and luck. Next step: add information known before release, like
-  artist followers, label or marketing budget.
-- **The artist signal gets weaker over time.** The relation falls from 0.31 in training
-  to 0.21 in validation and 0.18 in test, and about 55% of test songs have an artist
-  the model has never seen. Next step: retrain regularly so new artists enter.
-- **The popularity score is a snapshot** taken when the data was collected, not at
-  release. The yearly comparison helps but does not fully fix it. Next step: use the
-  popularity measured a fixed time after release, like 30 days.
-- **The June 2020 cause is a guess.** The numbers prove June is on a different scale,
-  but I did not verify why. Next step: check when the data was collected.
-- **Some features are still lopsided** and a linear model cannot capture non-linear
-  effects. I stayed with linear models because the assignment asks for it and they are
-  easy to explain.
-- **Settings were chosen on only two validation years.** Next step: use several
-  time-based validation windows.
-- **The hit rate ignores money.** A real decision needs the cost of promoting a song
-  and the value of a hit.
+- **Very low R² (0.049).** Only about 5% of the differences between songs of the same year are explained. Audio features say little about success, which also depends on marketing, fame and luck. Next step: add information known before release, like artist followers, label or marketing budget.
+- **The artist signal gets weaker over time.** The relation falls from 0.31 in training to 0.21 in validation and 0.18 in test, and about 55% of test songs have an artist the model has never seen. Next step: retrain regularly so new artists enter.
+- **The popularity score is a snapshot** taken when the data was collected, not at release. The yearly comparison helps but does not fully fix it. Next step: use the popularity measured a fixed time after release, like 30 days.
+- **The June 2020 cause is a guess.** The numbers prove June is on a different scale, but I did not verify why. Next step: check when the data was collected.
+- **Some features are still lopsided** and a linear model cannot capture non-linear effects. I stayed with linear models because the assignment asks for it and they are easy to explain.
+- **Settings were chosen on only two validation years.** Next step: use several time-based validation windows.
+- **The hit rate ignores money.** A real decision needs the cost of promoting a song and the value of a hit.
 
 ## How to run
 
-Run `uv run python main.py train` to train the three models and save them in `models/`.
-Run `uv run python main.py app` to open the dashboard, which only loads the saved
-models and trains nothing. The checks I used to find the June 2020 problem are in
-`eda/`; run them from the repo root with `uv run python -m eda.check_2020`.
+Run `uv run python main.py train` to train the three models and save them in `models/`. Run `uv run python main.py app` to open the dashboard, which only loads the saved models and trains nothing. The checks I used to find the June 2020 problem are in `eda/`; run them from the repo root with `uv run python -m eda.check_2020`.
