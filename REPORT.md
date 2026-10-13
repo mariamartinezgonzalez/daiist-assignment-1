@@ -6,19 +6,15 @@
 
 ## Dataset
 
-I use the **Spotify Data 1921-2020** dataset from Kaggle. One row is one song, with
-its audio features (for example danceability, energy, loudness) and a
-**popularity score from 0 to 100**.
-
-I only kept songs from **2000 to 2020**. In the data, the average popularity of
-1921-1950 songs is 1.9, while for 2000-2020 it is about 55. That gap reflects how
-old a song is, not how it sounds, so I cut the data.
+I use the **Spotify Data 1921-2020** dataset from Kaggle. One row is one song, with its audio features (danceability, energy, loudness) and a
+**popularity score from 0 to 100**. I only kept songs from **2000 to 2020**. In the data, the average popularity of
+1921-1950 songs is 1.9, while for 2000-2020 it is about 55. That gap reflects how old a song is, not how it sounds, so I cut the data.
 
 To keep the repo small and fair:
 - I removed duplicate songs (same artist and same title).
 - I took at most **850 songs per year**, so no year weighs more than another.
 - This gives **17,850 songs** (about 2.8 MB). The script that does this is
-  `make_sample.py`. It is run once and is not part of training. The raw 28 MB file
+  make_sample.py. It is run once and is not part of training. The raw 28 MB file
   is not in the repo.
 
 ## Business / real-life framing
