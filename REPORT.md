@@ -5,47 +5,32 @@
 - **BBADBA 5B**
 
 ## Dataset
+I use a public Spotify tabular dataset from Kaggle with songs from 1921 to 2020. Each row is one song. For each song we know audio features, which are numbers spotify calculates from the sound like: danceable, how energetic and how loud the song is. Also other characteristics like artist ,title, release date and a popularity score that goes from 0 to 100. As i mentioned, it is a tabular dataset so one row per song and one colum per feature.
 
-I use the **Spotify Data 1921-2020** dataset from Kaggle. One row is one song, with its audio features (danceability, energy, loudness) and a
-**popularity score from 0 to 100**. I only kept songs from **2000 to 2020**. In the data, the average popularity of
-1921-1950 songs is 1.9, while for 2000-2020 it is about 55. That gap reflects how old a song is, not how it sounds, so I cut the data.
+Why did I remove and not use all the years? Old songs have a very low popularity score. The average for songs from 1921 to 1950 is 1.9, while for 2000 to 2020 it is about 55. That does not mean old songs sound worse. The score is based on recent plays, so old songs just get fewer. If I kept them, the model would mainly learn "is this song old?" instead of anything about the music. So I kept only 2000 to 2020.
 
-To keep the repo small and fair:
-- I removed duplicate songs (same artist and same title).
-- I took at most **850 songs per year**, so no year weighs more than another.
-- This gives **17,850 songs** (about 2.8 MB). The script that does this is
-  make_sample.py. It is run once and is not part of training. The raw 28 MB file
-  is not in the repo.
+How did I clean the dataset and make it smaller? The original file is 28 MB, which is too big for this project, so I did this once, in a separate script make_sample.py:
+- I removed duplicates (the same artist with the same title).
+- I kept at most 850 songs per year, chosen at random. This way no year counts more than another.
+- The result is 17,850 songs (2.8 MB). This is the file the project uses. The original 28 MB file is not in the repository.
+- One more cleaning step that i will explain later is that I found that songs from June 2020 have faulty popularity scores and removed them (131 songs). The model is trained
+  on the remaining 17,719 songs. The details are in the next section.
 
 ## Business / real-life framing
 
-**The decision.** A music label receives many new songs and only has budget to
-promote some of them (for example playlist promotion). The model gives each new
-song a score so the label can **rank them and promote the top ones**.
+**The decision.** Imagine a music label that receives many new songs but only has budget to promote some of them, for example with playlist promotion. The model gives each new song a score, so the label can rank the songs and promote the ones at the top. So the model is not there to say "this song will have exactly 63 popularity". It is there to help choose.
 
-**What the model predicts.** Not raw popularity, but **how popular a song is
-compared with the other songs of its release year**:
-`target = popularity - average popularity of that year`.
-I did this because average popularity climbs from 45.8 (year 2000) to 69.4 (year
-2019). Part of that is just how the popularity score is measured, not how good
-the songs are. A label comparing songs released in the same period does not care
-about that general rise, only about which songs beat their group. A positive
-target means "more popular than the typical song of its year".
+**What the model predicts.** Not the raw popularity, but how popular a song is compared with the other songs from the same year: target = popularity - average popularity of that year. If the number is positive, the song did better than the typical song of its year. If it is negative, it did worse. Why did I do it like this? ecause the average popularity goes up every year: 45.8 in 2000 and 69.4 in 2019. Part of this is just how the score is measured (recent songs get more recent plays), not that songs are getting better. A label that compares songs released at the same time does not care about that general rise. It only cares about which songs beat the others. Without this change, the model would mostly learn "is the song recent?" again.
 
 **How this decided the pipeline:**
-- **Split by time, not at random.** A random split would let the model learn from
-  songs released *after* the ones it is tested on, which cannot happen in real
-  life. So: **train 2000-2015 (13,600 songs), validation 2016-2017 (1,700), test
-  2018 to May 2020 (2,419).** The validation set is only for choosing settings.
-  The test set is only used at the end.
-- **I do not use `year` as an input.** For a brand-new song, the year carries no
-  information about how it sounds.
-- **Every number learned from data is learned from the training years only**
-  (scaling, artist averages). Otherwise information from the future would leak in.
-- **Which metric?** Because the label only needs a good *ranking*, I report the
-  usual errors (MAE, RMSE, R²) and also a business number: **if we promote the top
-  k% of songs, how often is a promoted song really better than its cohort?**
-  (the "hit rate"). The dashboard has a slider for this.
+- **I split the data by time, not randomly.** In real life, the label never knows the future. A random split would let the model learn from songs released after the ones it is tested on, which is cheating. So I used:
+  - **Train: 2000 to 2015** (13,600 songs). The model learns here.
+  - **Validation: 2016 to 2017** (1,700 songs). I only use it to choose settings.
+  - **Test: 2018 to May 2020** (2,419 songs). I look at it only at the end, to see
+    how the model does on songs it has never seen.
+- **I do not use the year as an input.** For a brand-new song, the year gives no information about how it sounds.
+- **Everything the model learns from data, it learns only from the training years.** This includes the scaling of the numbers and the artist information. If not, information from the future would leak into the model.
+- **I chose the metrics because of the decision.** The label needs a good ranking, so besides the usual errors (MAE, RMSE and R²) I use a business number, the **hit rate**: if we promote the top k% of songs, how many of them really didbetter than the typical song of their year? The dashboard has a slider to change k.
 
 ## Data preparation & feature engineering
 
